@@ -27,8 +27,8 @@ namespace Victim
             _password = password;
         }
         public void serve() {
-            Console.WriteLine($"Server listening on port {0}, password is {1}",_listen_port, 123456);
-            IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Any, 8000);
+            Console.WriteLine(String.Format("Server listening on port {0}, password is {1}",_listen_port, _password));
+            IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Parse("172.16.16.110"), _listen_port);
             Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             socket.Bind(localEndPoint);
             socket.Listen(10);
@@ -41,7 +41,7 @@ namespace Victim
         }
 
         private void handleClient(Socket client)
-        {
+        {;
             while (client.Connected)
             {
                 string response;
@@ -59,20 +59,28 @@ namespace Victim
 
         private int send(Socket sock, string msg) {
             byte[] buffer = Encoding.ASCII.GetBytes(msg);
-            sock.Send(buffer, 4, SocketFlags.None);
+            sock.Send(buffer, msg.Length, SocketFlags.None);
             return 1;
         }
 
         private string receive(Socket client)
         {
+            string ans = "";
             byte[] rcv_buffer = new byte[MAX_MSG_SIZE];
+            int offset = 0;
             int readBytes = client.Receive(rcv_buffer, MAX_MSG_SIZE, SocketFlags.None);
-            if (readBytes == 0)
+            while (!reached_message_end(rcv_buffer, offset, readBytes)) {
+                byte[] tmp = { rcv_buffer[offset] };
+                ans += Encoding.ASCII.GetString(tmp);
+                offset++;
+            }
+            if (offset == 0)
             {
                 //handleNoResponse(client);
             }
             return System.Text.Encoding.Default.GetString(rcv_buffer);
         }
+
         public bool valid_password(string password)
         {
             return password.Equals(_password);
@@ -117,7 +125,17 @@ namespace Victim
             }
             return false;
         }
-
+        private bool reached_message_end(byte[] rcv_buffer, int offset, int readBytes)
+        {
+            if (offset < readBytes - 1 && offset < rcv_buffer.Length-1)
+            {
+                byte[] maybe_delimeter = { rcv_buffer[offset], rcv_buffer[offset+1] };
+                return Encoding.ASCII.GetString(maybe_delimeter).Equals(newline_delimeter);
+            }
+            else {
+                return false;
+            }
+        }
         private void addHack(string value)
         {
             _hacks.Enqueue(DateTime.Now);
@@ -126,13 +144,6 @@ namespace Victim
         private void disconnect_client(Socket client)
         {
             client.Close();
-        }
-
-        private void sendPleaseEnterMsg(Socket client)
-        {
-            string msg = please_enter_msg + newline_delimeter;
-            byte[] buffer = Encoding.ASCII.GetBytes(msg);
-            client.Send(buffer, 4, SocketFlags.None);
         }
         
     }
