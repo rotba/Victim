@@ -17,7 +17,7 @@ namespace Tests
         public void valid_passwordTest()
         {
             Assert.IsTrue(vs.valid_password(password_1));
-            Assert.IsTrue(vs.valid_password("123456"));
+            Assert.IsFalse(vs.valid_password("123456"));
         }
     }
 }
