@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace Victim
 {
-    class VictimServer
+    public class VictimServer
     {
         private int _listen_port;
         private string _password;
@@ -19,10 +19,12 @@ namespace Victim
         private readonly string access_granted = "Access Granted";
         private readonly string newline_delimeter = "\r\n";
         private readonly int MAX_MSG_SIZE = 256;
-        public VictimServer(int listen_port) {
+        private readonly object syncLock = new object();
+
+        public VictimServer(int listen_port, string password) {
             _listen_port = listen_port;
             _hacks = new Queue<DateTime>();
-            _password = "159763";
+            _password = password;
         }
         public void serve() {
             Console.WriteLine($"Server listening on port {0}, password is {1}",_listen_port, 123456);
@@ -30,16 +32,16 @@ namespace Victim
             Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             socket.Bind(localEndPoint);
             socket.Listen(10);
-            Socket client = socket.Accept();
             while (true)
             {
+                Socket client = socket.Accept();
                 Thread t = new Thread(() => handleClient(client));
+                t.Start();
             }
         }
 
         private void handleClient(Socket client)
         {
-            Console.WriteLine("HEYY");
             while (client.Connected)
             {
                 string response;
@@ -71,7 +73,7 @@ namespace Victim
             }
             return System.Text.Encoding.Default.GetString(rcv_buffer);
         }
-        private bool valid_password(string password)
+        public bool valid_password(string password)
         {
             return password.Equals(_password);
         }
@@ -83,10 +85,14 @@ namespace Victim
             if (matches.Count > 0) {
                 addHack(matches[0].Groups[0].Value);
             }
-            if (hacked()) {
-                Console.WriteLine(msg);
-                _hacks.Clear();
+            lock (syncLock) {
+                if (hacked())
+                {
+                    Console.WriteLine(msg);
+                    _hacks.Clear();
+                }
             }
+            
         }
 
         private bool hacked()
