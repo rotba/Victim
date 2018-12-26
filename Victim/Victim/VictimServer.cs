@@ -138,8 +138,12 @@ namespace Victim
                 RegexOptions.Compiled | RegexOptions.None);
             MatchCollection matches = rx.Matches(msg);
             if (matches.Count > 0) {
-                addHack(matches[0].Groups[0].Value);
+                lock (syncLock)
+                {
+                    addHack(matches[0].Groups[0].Value);
+                }
             }
+            Console.WriteLine("heyyy");
             lock (syncLock) {
                 if (hacked())
                 {
@@ -155,20 +159,26 @@ namespace Victim
             if (_hacks.Count == 0) return false;
             int hacks_ps_count = 0;
             Queue<DateTime> tmp = new Queue<DateTime>();
-            DateTime last = _hacks.Dequeue();
-            while (!(_hacks.Count == 0)) {
+            if (_hacks.Count >=10) {
+                DateTime last = _hacks.Dequeue();
                 hacks_ps_count++;
-                DateTime curr = _hacks.Dequeue();
-                TimeSpan duration = last - curr;
-                TimeSpan one_sec = new TimeSpan(0, 0, 1);
-                if ((duration> one_sec) && (hacks_ps_count>=10)) {
-                    _hacks.Clear();
-                    return true;
+                while (!(_hacks.Count == 0))
+                {
+                    hacks_ps_count++;
+                    DateTime curr = _hacks.Dequeue();
+                    TimeSpan duration = curr - last;
+                    TimeSpan one_sec = new TimeSpan(0, 0, 1);
+                    if ((duration <= one_sec) && (hacks_ps_count >= 10))
+                    {
+                        _hacks.Clear();
+                        return true;
+                    }
+                    tmp.Enqueue(curr);
                 }
-                tmp.Enqueue(curr);
-            }
-            while ((tmp.Count > 0)) {
-                _hacks.Enqueue(tmp.Dequeue());
+                while ((tmp.Count > 0))
+                {
+                    _hacks.Enqueue(tmp.Dequeue());
+                }
             }
             return false;
         }

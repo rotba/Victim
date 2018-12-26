@@ -13,7 +13,15 @@ namespace Victim
     {
         static void Main(string[] args)
         {
-            VictimServer vs = new VictimServer(2019,"passssap", "192.168.0.26");
+            string pass = "";
+            Random rand = new Random();
+            for (int i = 0; i <6; i++) {
+                pass += (char)('a'+rand.Next(0,26));
+            }
+            UdpClient uclient = new UdpClient(0);
+            int random_port = ((IPEndPoint)uclient.Client.LocalEndPoint).Port;
+            uclient.Close();
+            VictimServer vs = new VictimServer(random_port, pass, "192.168.43.164");
             vs.serve();
         }
     }
