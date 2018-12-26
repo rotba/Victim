@@ -13,6 +13,7 @@ namespace Victim
     public class VictimServer
     {
         private int _listen_port;
+        private string _ip;
         private string _password;
         private Queue<DateTime> _hacks;
         private readonly string please_enter_msg = "Please enter your password";
@@ -21,14 +22,15 @@ namespace Victim
         private readonly int MAX_MSG_SIZE = 256;
         private readonly object syncLock = new object();
 
-        public VictimServer(int listen_port, string password) {
+        public VictimServer(int listen_port, string password, string ip) {
             _listen_port = listen_port;
             _hacks = new Queue<DateTime>();
             _password = password;
+            _ip = ip;
         }
         public void serve() {
             Console.WriteLine(String.Format("Server listening on port {0}, password is {1}",_listen_port, _password));
-            IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Parse("172.16.16.110"), _listen_port);
+            IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Parse(_ip), _listen_port);
             Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             socket.Bind(localEndPoint);
             socket.Listen(10);
@@ -49,7 +51,7 @@ namespace Victim
                 response = receive(client);
                 if (valid_password(response))
                 {
-                    send(client, "Access Granted");
+                    send(client, "Access Granted\r\n");
                     response = receive(client);
                     handle_msg(response);
                 }
@@ -78,7 +80,7 @@ namespace Victim
             {
                 //handleNoResponse(client);
             }
-            return System.Text.Encoding.Default.GetString(rcv_buffer);
+            return ans;
         }
 
         public bool valid_password(string password)
