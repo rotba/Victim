@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -21,6 +22,7 @@ namespace Victim
         private readonly string newline_delimeter = "\r\n";
         private readonly int MAX_MSG_SIZE = 256;
         private readonly object syncLock = new object();
+        private readonly TimeSpan MAX_WAIT_FOR_CLIENT = new TimeSpan(0, 0, 1);
 
         public VictimServer(int listen_port, string password, string ip) {
             _listen_port = listen_port;
@@ -43,25 +45,36 @@ namespace Victim
         }
 
         private void handleClient(Socket client)
-        {;
-            while (client.Connected)
-            {
-                string response;
-                send(client, "Please enter your password\r\n");
-                response = receive(client);
-                if (valid_password(response))
+        {
+            try {
+                while (client.Connected)
                 {
-                    send(client, "Access Granted\r\n");
+                    string response;
+                    send(client, "Please enter your password\r\n");
                     response = receive(client);
-                    handle_msg(response);
+                    if (valid_password(response))
+                    {
+                        send(client, "Access Granted\r\n");
+                        response = receive(client);
+                        handle_msg(response);
+                    }
+                    disconnect_client(client);
                 }
-                disconnect_client(client);
+            }
+            catch (SocketException se) {
+                handleSocketException(se, client);
+            }
+            catch (MessageFormatException mfe) {
+                handle_message_format_exception(mfe, client);
             }
         }
 
         private int send(Socket sock, string msg) {
             byte[] buffer = Encoding.ASCII.GetBytes(msg);
-            sock.Send(buffer, msg.Length, SocketFlags.None);
+            try {
+                sock.Send(buffer, msg.Length, SocketFlags.None);
+            }
+            catch (SocketException se) { throw se; }
             return 1;
         }
 
@@ -69,14 +82,27 @@ namespace Victim
         {
             byte[] rcv_buffer = new byte[MAX_MSG_SIZE];
             int offset = 0;
-            int readBytes = client.Receive(rcv_buffer, MAX_MSG_SIZE, SocketFlags.None);
+            int readBytes;
+            try {
+                Stopwatch stopwatch = new Stopwatch();
+                readBytes = client.Receive(rcv_buffer, MAX_MSG_SIZE, SocketFlags.None);
+                stopwatch.Start();
+                while (readBytes ==0 && stopwatch.Elapsed<MAX_WAIT_FOR_CLIENT) {
+                    readBytes = client.Receive(rcv_buffer, MAX_MSG_SIZE, SocketFlags.None);
+                }
+            }
+            catch (SocketException se) { throw se; }
             int message_end_offset = get_messgae_end(rcv_buffer, readBytes);
             if (message_end_offset == -1)
             {
-                //handleNoResponse(client);
-                return null;
+                handle_invalid_response(client);
             }
             return Encoding.UTF8.GetString(rcv_buffer, 0, message_end_offset);
+        }
+
+        private void handle_invalid_response(Socket client)
+        {
+            throw new MessageFormatException();
         }
 
         private int get_messgae_end(byte[] rcv_buffer, int readBytes)
@@ -91,7 +117,15 @@ namespace Victim
                 }
                 offset++;
             }
-            return -1;
+            if (no_delimeter(rcv_buffer, offset)) {
+                return -1;
+            }
+            return offset;
+        }
+
+        private bool no_delimeter(byte[] rcv_buffer, int offset)
+        {
+            return offset ==rcv_buffer.Length-1 || offset == rcv_buffer.Length - 2;
         }
 
         public bool valid_password(string password)
@@ -158,6 +192,16 @@ namespace Victim
         {
             client.Close();
         }
-        
+        private void handle_message_format_exception(MessageFormatException mfe, Socket client)
+        {
+            client.Close();
+            Console.WriteLine(mfe);
+        }
+
+        private void handleSocketException(SocketException se, Socket client)
+        {
+            client.Close();
+            Console.WriteLine(se);
+        }
     }
 }
