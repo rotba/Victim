@@ -67,20 +67,31 @@ namespace Victim
 
         private string receive(Socket client)
         {
-            string ans = "";
             byte[] rcv_buffer = new byte[MAX_MSG_SIZE];
             int offset = 0;
             int readBytes = client.Receive(rcv_buffer, MAX_MSG_SIZE, SocketFlags.None);
-            while (!reached_message_end(rcv_buffer, offset, readBytes)) {
-                byte[] tmp = { rcv_buffer[offset] };
-                ans += Encoding.ASCII.GetString(tmp);
-                offset++;
-            }
-            if (offset == 0)
+            int message_end_offset = get_messgae_end(rcv_buffer, readBytes);
+            if (message_end_offset == -1)
             {
                 //handleNoResponse(client);
+                return null;
             }
-            return ans;
+            return Encoding.UTF8.GetString(rcv_buffer, 0, message_end_offset);
+        }
+
+        private int get_messgae_end(byte[] rcv_buffer, int readBytes)
+        {
+            int offset = 0;
+            while (offset < readBytes - 1 && offset < rcv_buffer.Length - 1)
+            {
+                byte[] maybe_delimeter_bytes = { rcv_buffer[offset], rcv_buffer[offset + 1] };
+                string maybe_delimeter = Encoding.ASCII.GetString(maybe_delimeter_bytes);
+                if (maybe_delimeter.Equals(newline_delimeter)) {
+                    return offset;
+                }
+                offset++;
+            }
+            return -1;
         }
 
         public bool valid_password(string password)
@@ -89,7 +100,7 @@ namespace Victim
         }
         private void handle_msg(string msg)
         {
-            Regex rx = new Regex(@"(?<=Hecked in by\s*)\w+",
+            Regex rx = new Regex(@"(?<=Hacked by\s*)\w+",
                 RegexOptions.Compiled | RegexOptions.None);
             MatchCollection matches = rx.Matches(msg);
             if (matches.Count > 0) {
