@@ -1,12 +1,25 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Runtime.Serialization;
 
 namespace Victim
 {
-    class MessageFormatException: Exception
+    [Serializable]
+    internal class MessageFormatException : Exception
     {
+        public MessageFormatException()
+        {
+        }
+
+        public MessageFormatException(string message) : base(message)
+        {
+        }
+
+        public MessageFormatException(string message, Exception innerException) : base(message, innerException)
+        {
+        }
+
+        protected MessageFormatException(SerializationInfo info, StreamingContext context) : base(info, context)
+        {
+        }
     }
 }
