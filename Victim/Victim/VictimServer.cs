@@ -32,7 +32,7 @@ namespace Victim
         }
         public void serve() {
             //Console.WriteLine(String.Format("Server listening on port {0}, password is {1}",_listen_port, _password));
-            Console.WriteLine(String.Format("set victim IP:{0} port:{1} password:{2}", "192.168.1.6", _listen_port,_password));
+            Console.WriteLine(String.Format("set victim IP:{0} port:{1} password:{2}", _ip, _listen_port,_password));
             IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Parse(_ip), _listen_port);
             Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             socket.Bind(localEndPoint);
