@@ -23,6 +23,7 @@ namespace Victim
         private readonly int MAX_MSG_SIZE = 256;
         private readonly object syncLock = new object();
         private readonly TimeSpan MAX_WAIT_FOR_CLIENT = new TimeSpan(0, 0, 1);
+        private readonly bool TEST = true;
 
         public VictimServer(int listen_port, string password, string ip) {
             _listen_port = listen_port;
@@ -31,8 +32,8 @@ namespace Victim
             _ip = ip;
         }
         public void serve() {
-            //Console.WriteLine(String.Format("Server listening on port {0}, password is {1}",_listen_port, _password));
-            Console.WriteLine(String.Format("set victim IP:{0} port:{1} password:{2}", _ip, _listen_port,_password));
+            Console.WriteLine(String.Format("Server listening on port {0}, password is {1}",_listen_port, _password));
+            //Console.WriteLine(String.Format("set victim IP:{0} port:{1} password:{2}", _ip, _listen_port,_password));
             IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Parse(_ip), _listen_port);
             Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             socket.Bind(localEndPoint);
@@ -138,20 +139,25 @@ namespace Victim
             Regex rx = new Regex(@"(?<=Hacked by\s*)\w+",
                 RegexOptions.Compiled | RegexOptions.None);
             MatchCollection matches = rx.Matches(msg);
-            if (matches.Count > 0) {
+            if (matches.Count > 0)
+            {
                 lock (syncLock)
                 {
                     addHack(matches[0].Groups[0].Value);
                 }
-            }
-            Console.WriteLine("heyyy");
-            lock (syncLock) {
-                if (hacked())
+                lock (syncLock)
                 {
-                    Console.WriteLine(msg);
-                    _hacks.Clear();
+                    if (hacked())
+                    {
+                        Console.WriteLine(msg);
+                        _hacks.Clear();
+                    }
                 }
             }
+            else {
+                Console.WriteLine("Invalid Hack message: {0}", msg);
+            }
+            
             
         }
 
@@ -212,7 +218,7 @@ namespace Victim
         private void handleSocketException(SocketException se, Socket client)
         {
             client.Close();
-            Console.WriteLine(se);
+            Console.WriteLine("Socket problems, client disconnected");
         }
     }
 }
